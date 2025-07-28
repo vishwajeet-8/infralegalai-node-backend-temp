@@ -43,11 +43,11 @@ export const uploadDocument = async (req, res) => {
     for (const file of files) {
       // Step 1: Convert
       const converted = await convertFileBuffer(file);
-      console.log("Converted:", {
-        filename: converted.filename,
-        mimeType: converted.mimeType,
-        size: converted.data.length,
-      });
+      // console.log("Converted:", {
+      //   filename: converted.filename,
+      //   mimeType: converted.mimeType,
+      //   size: converted.data.length,
+      // });
 
       // Step 2: Write temp file
       const tmpPath = await writeTempFile(converted);

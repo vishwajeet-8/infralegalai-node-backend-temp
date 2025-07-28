@@ -6,6 +6,7 @@ import inviteRoutes from "./src/routes/inviteRoutes.js";
 import workspaceRoutes from "./src/routes/workspaceRoutes.js";
 import documentRoutes from "./src/routes/documentRoutes.js";
 import researchRoutes from "./src/routes/researchRoutes.js";
+import extractionRoutes from "./src/routes/extractionRoutes.js";
 
 const app = express();
 
@@ -28,5 +29,6 @@ app.use("/legal-api", inviteRoutes);
 app.use("/legal-api", workspaceRoutes);
 app.use("/legal-api", documentRoutes);
 app.use("/legal-api", researchRoutes);
+app.use("/legal-api", extractionRoutes);
 
 export default app;
