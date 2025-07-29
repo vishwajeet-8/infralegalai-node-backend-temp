@@ -192,23 +192,6 @@ export async function deleteFile(req, res) {
   }
 }
 
-// export async function getSignedUrlForFile(req, res) {
-//    const key = req.params[0];
-//   console.log(key);
-//   try {
-//     const command = new GetObjectCommand({
-//       Bucket: process.env.AWS_BUCKET_NAME,
-//       Key: key,
-//     });
-
-//     const url = await getSignedUrl(s3, command, { expiresIn: 3600 }); // 1 hour expiration
-//     res.json({ url });
-//   } catch (err) {
-//     console.error("Error generating signed URL:", err);
-//     res.status(500).json({ message: "Error generating download URL" });
-//   }
-// }
-
 export const getSignedUrlForFile = async (req, res) => {
   try {
     const { key } = req.query; // Get key from query parameter
@@ -233,5 +216,106 @@ export const getSignedUrlForFile = async (req, res) => {
       message: "Error generating download URL",
       error: err.message,
     });
+  }
+};
+
+// export const geminiFileUri = async (req, res) => {
+//   const files = req.files;
+
+//   if (!files || files.length === 0) {
+//     return res.status(400).json({
+//       message: "Files are required",
+//     });
+//   }
+
+//   try {
+//     for (const file of files) {
+//       // Step 1: Convert
+//       const converted = await convertFileBuffer(file);
+
+//       // Step 2: Write temp file
+//       const tmpPath = await writeTempFile(converted);
+
+//       // Step 3: Upload to Gemini
+//       const geminiFile = await genAI.files.upload({
+//         file: tmpPath,
+//         config: { mimeType: converted.mimeType },
+//       });
+
+//       // Step 4: Wait for Gemini to process
+//       let state = geminiFile.state.name;
+//       while (state === "PROCESSING") {
+//         await new Promise((r) => setTimeout(r, 1000));
+//         const updated = await genAI.files.get({ name: geminiFile.name });
+//         state = updated.state.name;
+//       }
+//       await fs.remove(tmpPath);
+//     }
+
+//     return res.status(200).json({ message: "Upload & Gemini sync successful" });
+//   } catch (error) {
+//     console.error("Upload Error:", err);
+//     return res.status(500).json({ message: "Upload failed" });
+//   }
+// };
+
+export const geminiFileUri = async (req, res) => {
+  const files = req.files;
+
+  if (!files || files.length === 0) {
+    return res.status(400).json({
+      message: "Files are required",
+    });
+  }
+
+  if (files.length > 2) {
+    return res.status(400).json({
+      message: "Maximum of 2 files allowed",
+    });
+  }
+
+  try {
+    const geminiUris = await Promise.all(
+      files.map(async (file) => {
+        // Step 1: Convert
+        const converted = await convertFileBuffer(file);
+
+        // Step 2: Write temp file
+        const tmpPath = await writeTempFile(converted);
+
+        // Step 3: Upload to Gemini
+        const geminiFile = await genAI.files.upload({
+          file: tmpPath,
+          config: { mimeType: converted.mimeType },
+        });
+
+        // Step 4: Wait for Gemini to process
+        let state = geminiFile.state.name;
+        while (state === "PROCESSING") {
+          await new Promise((r) => setTimeout(r, 1000));
+          const updated = await genAI.files.get({ name: geminiFile.name });
+          state = updated.state.name;
+        }
+
+        // Step 5: Clean up temp file
+        await fs.remove(tmpPath);
+
+        return {
+          filename: converted.filename,
+          uri: geminiFile.name,
+          mimeType: converted.mimeType,
+        };
+      })
+    );
+
+    return res.status(200).json({
+      message: "Files processed and uploaded to Gemini successfully",
+      files: geminiUris,
+    });
+  } catch (error) {
+    console.error("Upload Error:", error);
+    return res
+      .status(500)
+      .json({ message: "Upload failed", error: error.message });
   }
 };
